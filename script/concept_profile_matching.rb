@@ -11,7 +11,7 @@ require_relative 'converter'
 class CPM_Nanopub_Converter < RDF_Nanopub_Converter
 
   SIO= RDF::Vocabulary.new('http://semanticscience.org/resource/')
-  GDA = RDF::Vocabulary.new('http://rdf.biosemantics.org/dataset/gene_disease_associations#')
+  STATO = RDF::Vocabulary.new('http://purl.obolibrary.org/obo/')
   PPA = RDF::Vocabulary.new('http://rdf.biosemantics.org/dataset/protein_protein_associations#')
 
   def initialize
@@ -56,13 +56,17 @@ class CPM_Nanopub_Converter < RDF_Nanopub_Converter
     @concept1_hash[concept1_id] += 1
     @concept2_hash[concept2_id] += 1
     @row_index += 1
+    $baseURI = ""
+    $gdaResourceURI = "http://rdf.biosemantics.org/dataset/gene_disease_associations"
 
     case @options[:subtype]
       when 'gda'
         @base = RDF::Vocabulary.new("#{@options[:base_url]}/gene_disease_associations/")
+        $baseURI = "#{@options[:base_url]}/gene_disease_associations/"
         create_gda_nanopub(concept1_id, concept2_id, p_value)
       when 'ppa'
         @base = RDF::Vocabulary.new("#{@options[:base_url]}/protein_protein_associations/")
+        $baseURI = "#{@options[:base_url]}/protein_protein_associations/"
         create_ppi_nanopub(concept1_id, concept2_id, p_value)
       else
         throw ArgumentError.new("Subtype #{@options[:subtype]} is not supported.")
@@ -84,26 +88,28 @@ class CPM_Nanopub_Converter < RDF_Nanopub_Converter
 
   protected
   def create_gda_nanopub(omim_id, gene_id, p_value)
-
+    
     # setup nanopub
-    nanopub = RDF::Vocabulary.new(@base[@row_index.to_s.rjust(6, '0')])
-    assertion = nanopub['#assertion']
-    provenance = nanopub['#provenance']
-    publication_info = nanopub['#publicationInfo']
+    nanopub = RDF::URI.new("#{$baseURI}#{@row_index.to_s.rjust(6, '0')}")
+    assertion = RDF::URI.new("#{$baseURI}#{@row_index.to_s.rjust(6, '0')}#assertion")
+    provenance = RDF::URI.new("#{$baseURI}#{@row_index.to_s.rjust(6, '0')}#provenance")
+    publication_info = RDF::URI.new("#{$baseURI}#{@row_index.to_s.rjust(6, '0')}#publicationInfo")
 
+    association = RDF::URI.new("#{$gdaResourceURI}#association_#{@row_index.to_s.rjust(6, '0')}")
+    association_percentile_value = RDF::URI.new("#{$gdaResourceURI}#association_#{@row_index.to_s.rjust(6, '0')}_percentile_value")
+    
     # main graph
     create_main_graph(nanopub, assertion, provenance, publication_info)
 
-    # assertion graph
-    association = GDA["association_#{@row_index.to_s.rjust(6, '0')}"]
-    association_p_value = GDA["association_#{@row_index.to_s.rjust(6, '0')}_p_value"]
+    # assertion graph    
     save(assertion, [
         [association, RDF.type, SIO['statistical-association']],
         [association, SIO['refers-to'], RDF::URI.new("http://bio2rdf.org/geneid:#{gene_id}")],
         [association, SIO['refers-to'], RDF::URI.new("http://bio2rdf.org/omim:#{omim_id.match(/OM_(\d+)/)[1]}")],
-        [association, SIO['has-measurement-value'], association_p_value],
-        [association_p_value, RDF.type, SIO['probability-value']],
-        [association_p_value, SIO['has-value'], RDF::Literal.new(p_value, :datatype => XSD.float)]
+        [association, SIO['has-measurement-value'], association_percentile_value],
+        # STATO_0000293 = percentile value
+        [association_percentile_value, RDF.type, STATO['STATO_0000293']],
+        [association_percentile_value, SIO['has-value'], RDF::Literal.new(p_value, :datatype => XSD.float)]
     ])
 
     # provenance graph
@@ -169,9 +175,14 @@ class CPM_Nanopub_Converter < RDF_Nanopub_Converter
     save(publication_info, [
         [nanopub, DC.rights, RDF::URI.new('http://creativecommons.org/licenses/by/3.0/')],
         [nanopub, DC.rightsHolder, RDF::URI.new('http://biosemantics.org')],
+        # B-6035-2012 = Schultes, Erik A
         [nanopub, PAV.authoredBy, RDF::URI.new('http://www.researcherid.com/rid/B-6035-2012')],
+        # B-5927-2012 = van Haagen, Herman HHBM
         [nanopub, PAV.authoredBy, RDF::URI.new('http://www.researcherid.com/rid/B-5927-2012')],
-        [nanopub, PAV.createdBy, RDF::URI.new('http://www.researcherid.com/rid/B-5852-2012')],
+        # E-7370-2012 = Mark Thompson
+        [nanopub, PAV.createdBy, RDF::URI.new('http://www.researcherid.com/rid/E-7370-2012')],
+        # J-7843-2013 = Rajaram Kaliyaperumal
+        [nanopub, PAV.createdBy, RDF::URI.new('http://www.researcherid.com/rid/J-7843-2013')],
         [nanopub, DC.created, RDF::Literal.new(Time.now.utc, :datatype => XSD.dateTime)]
     ])
   end
