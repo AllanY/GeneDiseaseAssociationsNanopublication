@@ -8,15 +8,36 @@ require_relative 'converter'
 #
 # Input file format:
 #   concept1_id concept1_external_id concept2_id concept2_external_id match_score p_value {top 10 concepts in JSON}
-class CPM_Nanopub_Converter < RDF_Nanopub_Converter
-
-  SIO= RDF::Vocabulary.new('http://semanticscience.org/resource/')
+class CPM_Nanopub_Converter < RDF_File_Converter
+  
+  
+  # Define some useful RDF vocabularies.(Note: Define subclass RDF vocabularies here)   
+  
+  FOAF = RDF::FOAF
+  DC = RDF::DC
+  RDFS = RDF::RDFS
+  XSD = RDF::XSD
+  PROV = RDF::Vocabulary.new('http://www.w3.org/ns/prov#')
+  OBO = RDF::Vocabulary.new('http://purl.org/obo/owl/obo#')
+  PAV = RDF::Vocabulary.new('http://swan.mindinformatics.org/ontologies/1.2/pav/')   
+  SIO = RDF::Vocabulary.new('http://semanticscience.org/resource/')
   STATO = RDF::Vocabulary.new('http://purl.obolibrary.org/obo/')
   PPA = RDF::Vocabulary.new('http://rdf.biosemantics.org/dataset/protein_protein_associations#')
+  NP = RDF::Vocabulary.new('http://www.nanopub.org/nschema#')
+  $base = RDF::Vocabulary.new($baseURI)
 
   def initialize
+    
+    # useful stuff for serializing graph.
+    prefixes = {    
+    :np => NP,
+    :rdf => RDF,
+    :sio => SIO,
+    :stato => STATO,
+    nil => $base
+    }
 
-    super
+    super(RDF, NP, prefixes)
 
     # for statistics
     @concept1_hash = Hash.new(0)
@@ -105,7 +126,8 @@ class CPM_Nanopub_Converter < RDF_Nanopub_Converter
     save(assertion, [
         [association, RDF.type, SIO['statistical-association']],
         [association, SIO['refers-to'], RDF::URI.new("http://bio2rdf.org/geneid:#{gene_id}")],
-        [association, SIO['refers-to'], RDF::URI.new("http://bio2rdf.org/omim:#{omim_id.match(/OM_(\d+)/)[1]}")],
+        [association, SIO['refers-to'], RDF::URI.new("http://bio2rdf.org/omim:#{omim_id}")],
+        #[association, SIO['refers-to'], RDF::URI.new("http://bio2rdf.org/omim:#{omim_id.match(/OM_(\d+)/)[1]}")],
         [association, SIO['has-measurement-value'], association_percentile_value],
         # STATO_0000293 = percentile value
         [association_percentile_value, RDF.type, STATO['STATO_0000293']],
