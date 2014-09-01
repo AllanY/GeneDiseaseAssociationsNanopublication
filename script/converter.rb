@@ -27,6 +27,7 @@ class RDF_Converter
 
     $logger = Logger.new(STDOUT)
     $logger.level = Logger::INFO
+    $logPrint = 10000
 
     $RDF = rdfNs
     $NP = npNs
@@ -37,6 +38,7 @@ class RDF_Converter
     File.open(@options[:input], 'r') do |f|
 
       time_start = Time.now.utc
+      time_start_rows = Time.now.utc
 
       while line = f.gets
         @line_number += 1
@@ -46,8 +48,9 @@ class RDF_Converter
           convert_row(line.strip)
         end
 
-        if @line_number % 10 == 0
-          #$logger.info("============ running time: #{(Time.now.utc - time_start).to_s} ============")
+        if @line_number % $logPrint == 0
+          $logger.info("============ running time for #{$logPrint} rows: #{(Time.now.utc - time_start_rows).to_s} ============")
+          time_start_rows = Time.now.utc
         end
 
       end

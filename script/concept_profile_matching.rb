@@ -40,8 +40,8 @@ class CPM_Nanopub_Converter < RDF_File_Converter
     super(RDF, NP, prefixes)
 
     # for statistics
-    @concept1_hash = Hash.new(0)
-    @concept2_hash = Hash.new(0)
+    #@concept1_hash = Hash.new(0)
+    #@concept2_hash = Hash.new(0)
     @no_null_genes = 0
     @no_null_omims = 0
   end
@@ -51,11 +51,20 @@ class CPM_Nanopub_Converter < RDF_File_Converter
   end
 
   def convert_row(row)
-    tokens = row.split
-    concept1_id = tokens[1]
-    concept2_id = tokens[3]
-    p_value = sprintf('%.3E', tokens[5]).to_f # round it to 3 significant digit
-
+    tokens = row.split(",")
+    concept1_id = tokens[0]
+    concept2_id = tokens[1]
+    p_value = nil
+    
+    if (tokens[2] != 'NaN')      
+      p_value = sprintf('%.3E', tokens[2]).to_f # round it to 3 significant digit        
+    else              
+      #puts("row #{@row_index} has no _percentile_value skipped.") 
+      return
+    end
+    
+    
+    
     if concept2_id == 'null'
       @logger.info("row #{@row_index.to_s} has no gene id. skipped.")
       @no_null_genes += 1
@@ -68,25 +77,25 @@ class CPM_Nanopub_Converter < RDF_File_Converter
       return
     end
 
-    if p_value > @options[:p_value_cutoff].to_f
-      @logger.warning("** row #{@row_index.to_s} has a p-value greater than #{@options[:p_value_cutoff]}. skipped. **")
-      return
-    end
+    #if p_value > @options[:p_value_cutoff].to_f
+     # @logger.warning("** row #{@row_index.to_s} has a p-value greater than #{@options[:p_value_cutoff]}. skipped. **")
+      #return
+    #end
 
 
-    @concept1_hash[concept1_id] += 1
-    @concept2_hash[concept2_id] += 1
+    #@concept1_hash[concept1_id] += 1
+    #@concept2_hash[concept2_id] += 1
     @row_index += 1
     $baseURI = ""
     $gdaResourceURI = "http://rdf.biosemantics.org/dataset/gene_disease_associations"
 
     case @options[:subtype]
       when 'gda'
-        @base = RDF::Vocabulary.new("#{@options[:base_url]}/gene_disease_associations/")
+        #@base = RDF::Vocabulary.new("#{@options[:base_url]}/gene_disease_associations/")
         $baseURI = "#{@options[:base_url]}/gene_disease_associations/"
         create_gda_nanopub(concept1_id, concept2_id, p_value)
       when 'ppa'
-        @base = RDF::Vocabulary.new("#{@options[:base_url]}/protein_protein_associations/")
+        #@base = RDF::Vocabulary.new("#{@options[:base_url]}/protein_protein_associations/")
         $baseURI = "#{@options[:base_url]}/protein_protein_associations/"
         create_ppi_nanopub(concept1_id, concept2_id, p_value)
       else
@@ -120,7 +129,7 @@ class CPM_Nanopub_Converter < RDF_File_Converter
     association_percentile_value = RDF::URI.new("#{$gdaResourceURI}#association_#{@row_index.to_s.rjust(6, '0')}_percentile_value")
     
     # main graph
-    create_main_graph(nanopub, assertion, provenance, publication_info)
+    #create_main_graph(nanopub, assertion, provenance, publication_info)
 
     # assertion graph    
     save(assertion, [
@@ -135,12 +144,12 @@ class CPM_Nanopub_Converter < RDF_File_Converter
     ])
 
     # provenance graph
-    create_gda_provenance_graph(provenance, assertion)
+    #create_gda_provenance_graph(provenance, assertion)
 
     # publication info graph
-    create_publication_info_graph(publication_info, nanopub)
+    #create_publication_info_graph(publication_info, nanopub)
 
-    puts "inserted nanopub <#{nanopub}>"
+    #puts "inserted nanopub <#{nanopub}>"
   end
 
   protected
@@ -205,6 +214,8 @@ class CPM_Nanopub_Converter < RDF_File_Converter
         [nanopub, PAV.createdBy, RDF::URI.new('http://www.researcherid.com/rid/E-7370-2012')],
         # J-7843-2013 = Rajaram Kaliyaperumal
         [nanopub, PAV.createdBy, RDF::URI.new('http://www.researcherid.com/rid/J-7843-2013')],
+        # 0000-0002-8777-5612 = Eelke van der horst
+        [nanopub, PAV.createdBy, RDF::URI.new('http://orcid.org/0000-0002-8777-5612')],
         [nanopub, DC.created, RDF::Literal.new(Time.now.utc, :datatype => XSD.dateTime)]
     ])
   end
