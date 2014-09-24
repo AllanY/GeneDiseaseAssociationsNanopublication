@@ -57,7 +57,7 @@ class CPM_Nanopub_Converter < RDF_File_Converter
     p_value = nil
     
     if (tokens[2] != 'NaN')      
-      p_value = sprintf('%.3E', tokens[2]).to_f # round it to 3 significant digit        
+      p_value = tokens[2].to_f # round it to 3 significant digit        
     else              
       #puts("row #{@row_index} has no _percentile_value skipped.") 
       return
@@ -117,7 +117,7 @@ class CPM_Nanopub_Converter < RDF_File_Converter
   end
 
   protected
-  def create_gda_nanopub(omim_id, gene_id, p_value)
+  def create_gda_nanopub(gene_id, disease_id, p_value)
     
     # setup nanopub
     nanopub = RDF::URI.new("#{$baseURI}#{@row_index.to_s.rjust(6, '0')}")
@@ -129,13 +129,13 @@ class CPM_Nanopub_Converter < RDF_File_Converter
     association_percentile_value = RDF::URI.new("#{$gdaResourceURI}#association_#{@row_index.to_s.rjust(6, '0')}_percentile_value")
     
     # main graph
-    #create_main_graph(nanopub, assertion, provenance, publication_info)
+    create_main_graph(nanopub, assertion, provenance, publication_info)
 
     # assertion graph    
     save(assertion, [
         [association, RDF.type, SIO['statistical-association']],
-        [association, SIO['refers-to'], RDF::URI.new("http://bio2rdf.org/geneid:#{gene_id}")],
-        [association, SIO['refers-to'], RDF::URI.new("http://bio2rdf.org/omim:#{omim_id}")],
+        [association, SIO['refers-to'], RDF::URI.new("http://rdf.biosemantics.org/emco/v1.5/concepts/C#{gene_id}")],
+        [association, SIO['refers-to'], RDF::URI.new("http://rdf.biosemantics.org/emco/v1.5/concepts/C#{disease_id}")],
         #[association, SIO['refers-to'], RDF::URI.new("http://bio2rdf.org/omim:#{omim_id.match(/OM_(\d+)/)[1]}")],
         [association, SIO['has-measurement-value'], association_percentile_value],
         # STATO_0000293 = percentile value
@@ -144,10 +144,10 @@ class CPM_Nanopub_Converter < RDF_File_Converter
     ])
 
     # provenance graph
-    #create_gda_provenance_graph(provenance, assertion)
+    create_gda_provenance_graph(provenance, assertion)
 
     # publication info graph
-    #create_publication_info_graph(publication_info, nanopub)
+    create_publication_info_graph(publication_info, nanopub)
 
     #puts "inserted nanopub <#{nanopub}>"
   end

@@ -49,12 +49,16 @@ class RDF_Converter
         end
 
         if @line_number % $logPrint == 0
-          $logger.info("============ running time for #{$logPrint} rows: #{(Time.now.utc - time_start_rows).to_s} ============")
+       #   $logger.info("============ running time for #{$logPrint} rows: #{(Time.now.utc - time_start_rows).to_s} ============")
+          puts "============ running time for #{$logPrint} rows: #{(Time.now.utc - time_start_rows).to_s}\tno of nanopublications so far: #{@row_index}\trows so far: #{@line_number} =========="
           time_start_rows = Time.now.utc
         end
 
       end
-      $logger.info("============ running time total: #{(Time.now.utc - time_start).to_s} ============")
+      #$logger.info("============ running time total: #{(Time.now.utc - time_start).to_s} ============")
+      puts "============ running time total:\t#{(Time.now.utc - time_start).to_s} ============"
+      #$looger.info("============ no of nanopublications = #{@row_index}")
+      puts "============ no of nanopublications =\t#{@row_index}"
     end
 
     if $saveFiles
