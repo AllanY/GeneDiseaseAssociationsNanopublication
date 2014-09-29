@@ -17,7 +17,8 @@ class RDF_Converter
     @options = get_options
     $base = RDF::Vocabulary.new(@options[:base_url])
 
-    $saveFiles = false
+    $saveFiles = true
+    $createFileAt = 1000000
 
     # tracking converter progress
     @line_number = 0 # incremented after a line is read from input
@@ -49,16 +50,14 @@ class RDF_Converter
         end
 
         if @line_number % $logPrint == 0
-       #   $logger.info("============ running time for #{$logPrint} rows: #{(Time.now.utc - time_start_rows).to_s} ============")
-          puts "============ running time for #{$logPrint} rows: #{(Time.now.utc - time_start_rows).to_s}\tno of nanopublications so far: #{@row_index}\trows so far: #{@line_number} =========="
+          #$logger.info("============ running time for #{$logPrint} rows: #{(Time.now.utc - time_start_rows).to_s} ============")
+          $logger.info("running time for #{$logPrint} rows: #{(Time.now.utc - time_start_rows).to_s}\tno of nanopublications so far: #{@row_index}\trows so far: #{@line_number}")
           time_start_rows = Time.now.utc
         end
 
       end
-      #$logger.info("============ running time total: #{(Time.now.utc - time_start).to_s} ============")
-      puts "============ running time total:\t#{(Time.now.utc - time_start).to_s} ============"
-      #$looger.info("============ no of nanopublications = #{@row_index}")
-      puts "============ no of nanopublications =\t#{@row_index}"
+      $logger.info("running time total: #{(Time.now.utc - time_start).to_s}\tno of nanopublications = #{@row_index}")
+      
     end
 
     if $saveFiles
@@ -146,7 +145,7 @@ class RDF_File_Converter < RDF_Converter
 
       $NoOfStatements += 1
 
-      if $NoOfStatements == 1000000
+      if $NoOfStatements == $createFileAt
         closeFile()
       end
     end

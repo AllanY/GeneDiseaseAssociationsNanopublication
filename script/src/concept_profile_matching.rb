@@ -44,6 +44,11 @@ class CPM_Nanopub_Converter < RDF_File_Converter
     #@concept2_hash = Hash.new(0)
     @no_null_genes = 0
     @no_null_omims = 0
+    @previous_matchscore = nil
+    @no_of_associations = (204072352).to_f 
+    @percentile = nil
+    $baseURI = ""
+    $gdaResourceURI = "http://rdf.biosemantics.org/dataset/gene_disease_associations"
   end
 
   def convert_header_row(row)
@@ -54,16 +59,6 @@ class CPM_Nanopub_Converter < RDF_File_Converter
     tokens = row.split(",")
     concept1_id = tokens[0]
     concept2_id = tokens[1]
-    p_value = nil
-    
-    if (tokens[2] != 'NaN')      
-      p_value = tokens[2].to_f # round it to 3 significant digit        
-    else              
-      #puts("row #{@row_index} has no _percentile_value skipped.") 
-      return
-    end
-    
-    
     
     if concept2_id == 'null'
       @logger.info("row #{@row_index.to_s} has no gene id. skipped.")
@@ -75,25 +70,36 @@ class CPM_Nanopub_Converter < RDF_File_Converter
       @logger.info("row #{@row_index.to_s} has no omim id. skipped.")
       @no_null_omims += 1
       return
+    end   
+    
+    if (tokens[2] != 'NaN')      
+      current_matchscore = tokens[2].to_f  
+          
+      if @previous_matchscore == nil || @previous_matchscore != current_matchscore        
+        @percentile = (@no_of_associations - @row_index) / @no_of_associations     
+        @percentile = (@percentile*100).to_f        
+        #puts "@row_index = #{@row_index}\t percentile = #{@percentile}"
+      end   
+      
+      if @row_index % $logPrint == 0
+        puts "current_matchscore = #{current_matchscore}\t percentile = #{@percentile}"
+      end
+      
+      @previous_matchscore = current_matchscore 
+      @row_index += 1  
+    else              
+      #puts("row #{@row_index} has no _percentile_value skipped.") 
+      return
     end
-
-    #if p_value > @options[:p_value_cutoff].to_f
-     # @logger.warning("** row #{@row_index.to_s} has a p-value greater than #{@options[:p_value_cutoff]}. skipped. **")
-      #return
-    #end
-
-
-    #@concept1_hash[concept1_id] += 1
-    #@concept2_hash[concept2_id] += 1
-    @row_index += 1
-    $baseURI = ""
-    $gdaResourceURI = "http://rdf.biosemantics.org/dataset/gene_disease_associations"
+    
+    
+    
 
     case @options[:subtype]
       when 'gda'
         #@base = RDF::Vocabulary.new("#{@options[:base_url]}/gene_disease_associations/")
         $baseURI = "#{@options[:base_url]}/gene_disease_associations/"
-        create_gda_nanopub(concept1_id, concept2_id, p_value)
+        create_gda_nanopub(concept1_id, concept2_id, @percentile)
       when 'ppa'
         #@base = RDF::Vocabulary.new("#{@options[:base_url]}/protein_protein_associations/")
         $baseURI = "#{@options[:base_url]}/protein_protein_associations/"
@@ -117,7 +123,7 @@ class CPM_Nanopub_Converter < RDF_File_Converter
   end
 
   protected
-  def create_gda_nanopub(gene_id, disease_id, p_value)
+  def create_gda_nanopub(gene_id, disease_id, percentile)
     
     # setup nanopub
     nanopub = RDF::URI.new("#{$baseURI}#{@row_index.to_s.rjust(6, '0')}")
@@ -140,7 +146,7 @@ class CPM_Nanopub_Converter < RDF_File_Converter
         [association, SIO['has-measurement-value'], association_percentile_value],
         # STATO_0000293 = percentile value
         [association_percentile_value, RDF.type, STATO['STATO_0000293']],
-        [association_percentile_value, SIO['has-value'], RDF::Literal.new(p_value, :datatype => XSD.float)]
+        [association_percentile_value, SIO['has-value'], RDF::Literal.new(percentile, :datatype => XSD.float)]
     ])
 
     # provenance graph
@@ -188,16 +194,16 @@ class CPM_Nanopub_Converter < RDF_File_Converter
   private
   def create_gda_provenance_graph(provenance, assertion)
     save(provenance, [
-        [assertion, PROV.wasDerivedFrom, RDF::URI.new('http://rdf.biosemantics.org/vocabularies/text_mining#gene_disease_concept_profiles_1980_2010')],
-        [assertion, PROV.wasGeneratedBy, RDF::URI.new('http://rdf.biosemantics.org/vocabularies/text_mining#gene_disease_concept_profiles_matching_1980_2010')]
+        [assertion, PROV.wasDerivedFrom, RDF::URI.new('http://rdf.biosemantics.org/vocabularies/text_mining#gene_disease_concept_profiles_1980_2014')],
+        [assertion, PROV.wasGeneratedBy, RDF::URI.new('http://rdf.biosemantics.org/vocabularies/text_mining#gene_disease_concept_profiles_matching_1980_2014')]
     ])
   end
 
   private
   def create_ppi_provenance_graph(provenance, assertion)
     save(provenance, [
-        [assertion, PROV.wasDerivedFrom, RDF::URI.new('http://rdf.biosemantics.org/vocabularies/text_mining#protein_protein_concept_profiles_1980_2010')],
-        [assertion, PROV.wasGeneratedBy, RDF::URI.new('http://rdf.biosemantics.org/vocabularies/text_mining#protein_protein_concept_profiles_matching_1980_2010')]
+        [assertion, PROV.wasDerivedFrom, RDF::URI.new('http://rdf.biosemantics.org/vocabularies/text_mining#protein_protein_concept_profiles_1980_2014')],
+        [assertion, PROV.wasGeneratedBy, RDF::URI.new('http://rdf.biosemantics.org/vocabularies/text_mining#protein_protein_concept_profiles_matching_1980_2014')]
     ])
   end
 
